@@ -1,5 +1,7 @@
 use actix_web;
 
+use crate::handler::download::DownloadHandler;
+use crate::handler::list_downloads::ListDownloadsHandler;
 use crate::handler::list_games::ListGamesHandler;
 use crate::handler::Handler;
 
@@ -32,12 +34,12 @@ async fn ping() -> impl actix_web::Responder {
 }
 
 #[derive(serde::Deserialize)]
-struct Search {
+struct SearchQuery {
     key: String,
 }
 
 #[actix_web::get("/search")]
-async fn search(query: actix_web::web::Query<Search>) -> impl actix_web::Responder {
+async fn search(query: actix_web::web::Query<SearchQuery>) -> impl actix_web::Responder {
     let handler = ListGamesHandler {
         search_key: query.key.clone(),
     };
@@ -48,10 +50,22 @@ async fn search(query: actix_web::web::Query<Search>) -> impl actix_web::Respond
 
 #[actix_web::get("/downloads")]
 async fn list_downloads() -> impl actix_web::Responder {
-    actix_web::HttpResponse::Ok().body("TODO")
+    let handler = ListDownloadsHandler;
+    let response = handler.handle().await;
+    actix_web::HttpResponse::Ok().body(serde_json::to_string(&response).unwrap())
 }
 
-#[actix_web::post("/download")]
-async fn download() -> impl actix_web::Responder {
-    actix_web::HttpResponse::Ok().body("TODO")
+#[derive(serde::Deserialize)]
+struct DownloadQuery {
+    id: String,
+}
+
+#[actix_web::get("/download")]
+async fn download(query: actix_web::web::Query<DownloadQuery>) -> impl actix_web::Responder {
+    let handler = DownloadHandler {
+        game_id: query.id.clone(),
+    };
+
+    let _ = handler.handle().await;
+    actix_web::HttpResponse::Ok()
 }

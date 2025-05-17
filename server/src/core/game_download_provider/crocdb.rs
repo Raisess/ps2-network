@@ -19,6 +19,7 @@ impl CrocdbDownloadProvider {
 
 #[async_trait::async_trait]
 impl GameDownloadProvider for CrocdbDownloadProvider {
+    // @TODO: improve error handling to not panic
     async fn list(&self, search_key: &str) -> Vec<GameDownloadData> {
         let payload = r#"
           {
@@ -30,31 +31,59 @@ impl GameDownloadProvider for CrocdbDownloadProvider {
         "#
         .replace("{search_key}", search_key);
 
-        match self.http_client.post::<Response>("/search", &payload).await {
-            Err(err) => panic!("TODO: Failed to search {err}"),
+        match self
+            .http_client
+            .post::<ListResponse>("/search", &payload)
+            .await
+        {
+            Err(err) => panic!("TODO: Failed to get {err}"),
             Ok(response) => response
                 .data
                 .results
                 .iter()
                 .map(move |item| GameDownloadData {
+                    id: item.slug.clone(),
                     name: item.links[0].name.clone(),
                     filename: item.links[0].filename.clone(),
                     host: item.links[0].host.clone(),
                     size: item.links[0].size.clone(),
                     url: item.links[0].url.clone(),
+                    status: None,
                 })
                 .collect(),
+        }
+    }
+
+    // @TODO: improve error handling to not panic
+    async fn get(&self, id: &str) -> GameDownloadData {
+        let payload = r#"{ "slug": "{slug}" }"#.replace("{slug}", id);
+
+        match self
+            .http_client
+            .post::<GetResponse>("/entry", &payload)
+            .await
+        {
+            Err(err) => panic!("TODO: Failed to get {err}"),
+            Ok(response) => GameDownloadData {
+                id: response.data.entry.slug.clone(),
+                name: response.data.entry.links[0].name.clone(),
+                filename: response.data.entry.links[0].filename.clone(),
+                host: response.data.entry.links[0].host.clone(),
+                size: response.data.entry.links[0].size.clone(),
+                url: response.data.entry.links[0].url.clone(),
+                status: None,
+            },
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Response {
-    data: Data,
+struct ListResponse {
+    data: ListData,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Data {
+struct ListData {
     results: Vec<ResultItem>,
     current_results: u32,
     total_results: u32,
@@ -63,15 +92,25 @@ struct Data {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+struct GetResponse {
+    data: GetData,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct GetData {
+    entry: ResultItem,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 struct ResultItem {
     slug: String,
-    links: Vec<LinkItem>, // Multiple links
+    links: Vec<LinkItem>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct LinkItem {
     name: String,
-    r#type: String, // "type" is a reserved keyword, so we use `r#type` to escape it
+    r#type: String,
     format: String,
     url: String,
     filename: String,

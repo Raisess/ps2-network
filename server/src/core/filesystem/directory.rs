@@ -37,7 +37,6 @@ impl Directory {
      * @param &String
      */
     pub fn file_exists(&self, filename: &String) -> bool {
-        println!("{}", &format!("{}/{filename}", self.path));
         std::path::Path::new(&format!("{}/{filename}", self.path)).is_file()
     }
 
