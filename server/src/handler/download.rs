@@ -11,6 +11,13 @@ pub struct DownloadHandler {
 #[async_trait::async_trait]
 impl Handler<()> for DownloadHandler {
     async fn handle(&self) -> () {
+        let clone_queue = queue().lock().unwrap().clone();
+        for item in clone_queue.iter() {
+            if item.id == self.game_id {
+                return ();
+            }
+        }
+
         let provider = CrocdbDownloadProvider::new();
         let mut game_download_data = provider.get(&self.game_id).await;
         game_download_data.status = Some(GameDownloadStatus::PENDING);

@@ -2,11 +2,6 @@ pub mod directory;
 
 use directory::Directory;
 
-pub enum FilesystemError {
-    FileNotExistsError(String),
-    DirNotExistsError(String),
-}
-
 const MAXIMUM_CD_SIZE_MB: u64 = 700;
 
 /**
@@ -66,5 +61,19 @@ impl Filesystem {
             &self.taget_directory,
             &target_filename,
         ))
+    }
+}
+
+pub enum FilesystemError {
+    FileNotExistsError(String),
+    DirNotExistsError(String),
+}
+
+impl std::fmt::Display for FilesystemError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FilesystemError::FileNotExistsError(file) => write!(f, "File do not exists {file}"),
+            FilesystemError::DirNotExistsError(dir) => write!(f, "Directory do not exists {dir}"),
+        }
     }
 }
