@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{GameDownloadData, GameDownloadProvider};
+use super::{DownloadData, DownloadProvider};
 use crate::common::http_client::HttpClient;
 
 const CROCDB_API_HOST: &str = "https://api.crocdb.net";
@@ -18,9 +18,9 @@ impl CrocdbDownloadProvider {
 }
 
 #[async_trait::async_trait]
-impl GameDownloadProvider for CrocdbDownloadProvider {
+impl DownloadProvider for CrocdbDownloadProvider {
     // @TODO: improve error handling to not panic
-    async fn list(&self, search_key: &str) -> Vec<GameDownloadData> {
+    async fn list(&self, search_key: &str) -> Vec<DownloadData> {
         let payload = r#"
           {
             "search_key": "{search_key}",
@@ -41,7 +41,7 @@ impl GameDownloadProvider for CrocdbDownloadProvider {
                 .data
                 .results
                 .iter()
-                .map(move |item| GameDownloadData {
+                .map(move |item| DownloadData {
                     id: item.slug.clone(),
                     name: item.links[0].name.clone(),
                     filename: item.links[0].filename.clone(),
@@ -55,7 +55,7 @@ impl GameDownloadProvider for CrocdbDownloadProvider {
     }
 
     // @TODO: improve error handling to not panic
-    async fn get(&self, id: &str) -> GameDownloadData {
+    async fn get(&self, id: &str) -> DownloadData {
         let payload = r#"{ "slug": "{slug}" }"#.replace("{slug}", id);
 
         match self
@@ -64,7 +64,7 @@ impl GameDownloadProvider for CrocdbDownloadProvider {
             .await
         {
             Err(err) => panic!("TODO: Failed to get {err}"),
-            Ok(response) => GameDownloadData {
+            Ok(response) => DownloadData {
                 id: response.data.entry.slug.clone(),
                 name: response.data.entry.links[0].name.clone(),
                 filename: response.data.entry.links[0].filename.clone(),
