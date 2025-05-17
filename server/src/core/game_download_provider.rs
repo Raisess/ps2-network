@@ -1,8 +1,8 @@
+use serde::Serialize;
+
 pub mod crocdb;
 
-use async_trait::async_trait;
-
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct GameDownloadData {
     pub name: String,
     pub filename: String,
@@ -11,7 +11,7 @@ pub struct GameDownloadData {
     pub url: String,
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait GameDownloadProvider {
     async fn list(&self, search_key: &str) -> Vec<GameDownloadData>;
 }

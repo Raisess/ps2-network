@@ -1,8 +1,11 @@
 pub mod directory;
-pub mod errors;
 
 use directory::Directory;
-use errors::{DirNotExistsError, FileNotExistsError};
+
+pub enum FilesystemError {
+    FileNotExistsError(String),
+    DirNotExistsError(String),
+}
 
 const MAXIMUM_CD_SIZE_MB: u64 = 700;
 
@@ -35,23 +38,19 @@ impl Filesystem {
      *
      * @param String - "SCUS_973.99.God of War.iso"
      */
-    pub fn move_game(&self, filename: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn move_game(&self, filename: String) -> Result<(), FilesystemError> {
         if !self.source_directory.file_exists(&filename) {
-            return Err(Box::new(FileNotExistsError { filename }));
+            return Err(FilesystemError::FileNotExistsError(filename));
         }
 
-        let dvd_dir = &"DVD".to_string();
-        if !self.taget_directory.dir_exists(dvd_dir) {
-            return Err(Box::new(DirNotExistsError {
-                dirname: dvd_dir.to_owned(),
-            }));
+        let dvd_dir = "DVD".to_string();
+        if !self.taget_directory.dir_exists(&dvd_dir) {
+            return Err(FilesystemError::DirNotExistsError(dvd_dir));
         }
 
-        let cd_dir = &"CD".to_string();
-        if !self.taget_directory.dir_exists(cd_dir) {
-            return Err(Box::new(DirNotExistsError {
-                dirname: cd_dir.to_owned(),
-            }));
+        let cd_dir = "CD".to_string();
+        if !self.taget_directory.dir_exists(&cd_dir) {
+            return Err(FilesystemError::DirNotExistsError(cd_dir));
         }
 
         let target_dir = if self.source_directory.file_size(&filename) > MAXIMUM_CD_SIZE_MB {

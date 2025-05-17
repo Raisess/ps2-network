@@ -1,7 +1,7 @@
 /**
  * Directory - A representation of the filesystem directory
  */
-pub struct Directory {
+pub(super) struct Directory {
     path: String,
 }
 

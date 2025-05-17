@@ -1,8 +1,7 @@
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::common::http_client::HttpClient;
 use super::{GameDownloadData, GameDownloadProvider};
+use crate::common::http_client::HttpClient;
 
 const CROCDB_API_HOST: &str = "https://api.crocdb.net";
 
@@ -18,7 +17,7 @@ impl CrocdbDownloadProvider {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl GameDownloadProvider for CrocdbDownloadProvider {
     async fn list(&self, search_key: &str) -> Vec<GameDownloadData> {
         let payload = r#"

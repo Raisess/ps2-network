@@ -9,8 +9,8 @@ fn main() {
 }*/
 
 use server::common::http_client::HttpClient;
-use server::game_download_provider::crocdb::CrocdbDownloadProvider;
-use server::game_download_provider::GameDownloadProvider;
+use server::core::game_download_provider::crocdb::CrocdbDownloadProvider;
+use server::core::game_download_provider::GameDownloadProvider;
 
 #[actix_web::main]
 async fn main() -> () {
