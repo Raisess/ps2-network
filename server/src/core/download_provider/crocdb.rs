@@ -33,7 +33,7 @@ impl DownloadProvider for CrocdbDownloadProvider {
 
         match self
             .http_client
-            .post::<ListResponse>("/search", &payload)
+            .post::<ListResponse>("search", &payload)
             .await
         {
             Err(err) => panic!("TODO: Failed to get {err}"),
@@ -60,7 +60,7 @@ impl DownloadProvider for CrocdbDownloadProvider {
 
         match self
             .http_client
-            .post::<GetResponse>("/entry", &payload)
+            .post::<GetResponse>("entry", &payload)
             .await
         {
             Err(err) => panic!("TODO: Failed to get {err}"),
