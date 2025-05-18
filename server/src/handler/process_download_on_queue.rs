@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use crate::common::http_client::HttpClient;
-use crate::core::download_provider::DownloadStatus;
 use crate::core::queue::queue;
 
 use super::Handler;
@@ -14,13 +13,12 @@ pub struct ProcessDownloadOnQueueHandler;
 #[async_trait::async_trait]
 impl Handler<()> for ProcessDownloadOnQueueHandler {
     async fn handle(&self) -> () {
-        // @TODO: update game state before poping and pop only at the end process
-        let mut queue = queue().lock().await;
+        let clone_queue = queue().lock().unwrap().clone();
+        let game = clone_queue.front();
 
-        match queue.front_mut() {
+        match game {
             Some(game) => {
                 println!("game: {:#?}", game);
-                game.status = Some(DownloadStatus::DOWNLOADING);
 
                 let download_path =
                     PathBuf::from(format!("/home/danilo/Downloads/{}", game.filename));
@@ -28,16 +26,12 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
                 let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
                 println!("DONE!");
 
-                game.status = Some(DownloadStatus::EXTRACTING);
-
                 let file = std::fs::read(&download_path).unwrap();
                 let download_path_parent = download_path.parent().unwrap();
                 zip_extract::extract(std::io::Cursor::new(file), &download_path_parent, true)
                     .unwrap();
 
                 std::fs::remove_file(&download_path).unwrap();
-
-                game.status = Some(DownloadStatus::INSTALLING);
 
                 let extracted_paths = match_extracted_paths(&download_path);
                 if extracted_paths.len() > 1 {
@@ -66,8 +60,8 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
 
                 // @TODO: download game art
                 // should do that directly on the target directory???
-                game.status = Some(DownloadStatus::COMPLETED);
-                queue.pop_front();
+
+                queue().lock().unwrap().pop_front();
             }
             None => {}
         }

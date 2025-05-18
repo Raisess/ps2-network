@@ -10,6 +10,6 @@ pub struct ListDownloadsOnQueueHandler;
 #[async_trait::async_trait]
 impl Handler<VecDeque<DownloadData>> for ListDownloadsOnQueueHandler {
     async fn handle(&self) -> VecDeque<DownloadData> {
-        queue().lock().await.clone()
+        queue().lock().unwrap().clone()
     }
 }
