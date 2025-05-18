@@ -21,17 +21,23 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
         match game {
             Some(game) => {
                 println!("Processing: {:#?}", game);
+
+                println!("Downloading...");
                 let download_path =
                     PathBuf::from(format!("{}/{}", Config::source_path(), game.filename));
                 let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
+                println!("Downloaded!");
 
+                println!("Extracting...");
                 let file = std::fs::read(&download_path).unwrap();
                 let download_path_parent = download_path.parent().unwrap();
                 zip_extract::extract(std::io::Cursor::new(file), &download_path_parent, true)
                     .unwrap();
 
                 std::fs::remove_file(&download_path).unwrap();
+                println!("Extracted!");
 
+                println!("Installing...");
                 let extracted_paths = match_extracted_paths(&download_path);
                 if extracted_paths.len() > 1 {
                     // @TODO: convert bin/cue to iso
@@ -68,6 +74,7 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
                     converted_game_filename,
                 ));
                 std::fs::rename(extracted_path, destination_path).unwrap();
+                println!("Installed!");
 
                 // @TODO: download game art
                 // should do that directly on the target directory???
@@ -81,8 +88,13 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
 }
 
 fn get_normalized_filename_for_opl(game_serial: String, filename: String) -> String {
-    // @TODO: remove (US) from the name
-    let game_filename = &filename.replace(".iso", "")[..32];
+    let re = regex::Regex::new(r"\(([^)]+)\)").unwrap();
+    let modified_filename = re.replace_all(&filename, "").replace(".iso", "");
+    let game_filename = &modified_filename
+        .trim()
+        .chars()
+        .take(32)
+        .collect::<String>();
     format!("{game_serial}.{game_filename}.iso")
 }
 

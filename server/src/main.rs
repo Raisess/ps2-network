@@ -12,7 +12,7 @@ async fn main() -> std::io::Result<()> {
 
     actix_web::rt::spawn(async {
         loop {
-            actix_web::rt::time::sleep(Duration::from_millis(1000)).await;
+            actix_web::rt::time::sleep(Duration::from_millis(100)).await;
             let handler = ProcessDownloadOnQueueHandler;
             handler.handle().await;
         }
