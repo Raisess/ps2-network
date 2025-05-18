@@ -3,15 +3,6 @@ use serde::Serialize;
 pub mod crocdb;
 
 #[derive(Debug, Clone, Serialize)]
-pub enum DownloadStatus {
-    PENDING,
-    DOWNLOADING,
-    EXTRACTING,
-    INSTALLING,
-    COMPLETED,
-}
-
-#[derive(Debug, Clone, Serialize)]
 pub struct DownloadData {
     pub id: String,
     pub name: String,
@@ -19,7 +10,6 @@ pub struct DownloadData {
     pub host: String,
     pub size: u64,
     pub url: String,
-    pub status: Option<DownloadStatus>,
 }
 
 #[async_trait::async_trait]
