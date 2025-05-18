@@ -5,7 +5,9 @@ pub mod crocdb;
 #[derive(Debug, Clone, Serialize)]
 pub enum DownloadStatus {
     PENDING,
-    PROCESSING,
+    DOWNLOADING,
+    EXTRACTING,
+    INSTALLING,
     COMPLETED,
 }
 

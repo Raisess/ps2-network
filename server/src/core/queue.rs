@@ -1,5 +1,6 @@
+use async_std::sync::Mutex;
 use std::collections::VecDeque;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 use crate::core::download_provider::DownloadData;
 
