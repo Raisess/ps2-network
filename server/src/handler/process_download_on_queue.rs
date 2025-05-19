@@ -23,7 +23,7 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
         println!("Processing: {:#?}", game);
 
         println!("Downloading...");
-        let download_path = get_path(&Config::source_path(), &game.filename);
+        let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
         let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
         println!("Downloaded!");
 
@@ -50,7 +50,7 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
             } else {
                 "CD"
             };
-        let target_dir_path = get_path(&Config::target_path(), &target_dir.to_string());
+        let target_dir_path = get_path_buf(vec![&Config::target_path(), &target_dir.to_string()]);
         if !target_dir_path.is_dir() {
             std::fs::create_dir(&target_dir_path).unwrap();
         }
@@ -64,38 +64,42 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
             .to_string();
 
         let converted_game_filename = get_normalized_filename_for_opl(&game_serial, &game_filename);
-        let destination_path = PathBuf::from(format!(
-            "{}/{}",
+        let destination_path = get_path_buf(vec![
             target_dir_path.to_str().unwrap(),
-            converted_game_filename,
-        ));
+            &converted_game_filename,
+        ]);
         std::fs::rename(extracted_path, destination_path).unwrap();
         println!("Installed!");
 
         println!("Downlading ART...");
         let art_provider = InternetArchiveArtProvider;
         let art_data = art_provider.get(game_serial.as_str()).await;
-        let art_dir_path = get_path(&Config::target_path(), &"ART".to_string());
+        let art_dir_path = get_path_buf(vec![&Config::target_path(), "ART"]);
         if !art_dir_path.is_dir() {
             std::fs::create_dir(&art_dir_path).unwrap();
         }
 
-        let bg_art_path = format!("{}/{game_serial}_BG.png", art_dir_path.to_string_lossy());
-        let _ = HttpClient::download(&art_data.bg_url, &bg_art_path).await;
+        let bg_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
+        let _ = HttpClient::download(&art_data.bg_url, &bg_art_path.to_string_lossy()).await;
 
-        let cov_art_path = format!("{}/{game_serial}_COV.png", art_dir_path.to_string_lossy());
-        let _ = HttpClient::download(&art_data.cov_url, &cov_art_path).await;
+        let cov_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.cov_file]);
+        let _ = HttpClient::download(&art_data.cov_url, &cov_art_path.to_string_lossy()).await;
 
-        let logo_art_path = format!("{}/{game_serial}_LGO.png", art_dir_path.to_string_lossy());
-        let _ = HttpClient::download(&art_data.logo_url, &logo_art_path).await;
+        let lgo_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.lgo_file]);
+        let _ = HttpClient::download(&art_data.lgo_url, &lgo_art_path.to_string_lossy()).await;
         println!("Downladed ART!");
 
         println!("Done!");
     }
 }
 
-fn get_path(dirname: &String, subdirname: &String) -> PathBuf {
-    PathBuf::from(format!("{dirname}/{subdirname}"))
+fn get_path_buf(path: Vec<&str>) -> PathBuf {
+    let mut path_buf = PathBuf::from(path[0]);
+    for i in 1..path.len() {
+        path_buf.push(path[i]);
+    }
+
+    path_buf
 }
 
 fn get_normalized_filename_for_opl(game_serial: &String, filename: &String) -> String {
