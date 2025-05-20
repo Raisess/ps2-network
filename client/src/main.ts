@@ -1,5 +1,5 @@
-import { Component, Menu, MenuManager } from "./menu";
 import { PS2NetworkClient } from "./ps2n-client";
+import { UI, UIItem } from "./ui";
 
 const SERVER_IP = "192.168.3.10";
 const SERVER_PORT = 8080;
@@ -14,38 +14,37 @@ const pad = Pads.get();
 pad.setEventHandler();
 
 const client = new PS2NetworkClient(SERVER_IP, SERVER_PORT)
+const ui = new UI(font, pad);
 
-const backToMainComponent = new Component("Back", (ctx) => {
-  ctx.manager!.set("main");
+const backToMainItem = new UIItem("Back", (ctx) => {
+  ctx.parent.set("main");
 });
 
-const title = `PS2 Network: ${SERVER_IP}:${SERVER_PORT}`;
-const main = new Menu(title, font, pad);
+// -------- MAIN SCREEN -------- //
+const main = ui.createComponent("main", `PS2 Network: ${SERVER_IP}:${SERVER_PORT}`);
 
-main.addComponent(new Component("Search Games", (ctx) => {
-  const menu = ctx.manager!.set("search");
-  menu.reset();
-  menu.addComponent(backToMainComponent);
+// -------- SEARCH SCREEN -------- //
+main.addItem(new UIItem("Search Games", (ctx) => {
+  const to = ctx.parent.createComponent("search", "Search");
+  to.reset();
+  to.addItem(backToMainItem);
 }));
 
-main.addComponent(new Component("My Downloads", (ctx) => {
-  const downloads = client.listDownloads();
+// -------- DOWNLOADS SCREEN -------- //
+main.addItem(new UIItem("My Downloads", (ctx) => {
+  const to = ctx.parent.createComponent("downloads", "Downloads");
+  to.reset();
+  to.addItem(backToMainItem);
 
-  const menu = ctx.manager!.set("downloads");
-  menu.reset();
-  menu.addComponent(backToMainComponent);
+  const downloads = client.listDownloads();
   downloads.forEach((download) => {
-    menu.addComponent(new Component(download.name));
+    to.addItem(new UIItem(download.name));
   });
 }));
 
-const menuManager = new MenuManager();
-menuManager.addMenu("main", main);
-menuManager.addMenu("search", new Menu("Search Games", font, pad));
-menuManager.addMenu("downloads", new Menu("My Downloads", font, pad));
-
+ui.set("main");
 os.setInterval(() => {
   Screen.clear();
-  menuManager.render();
+  ui.render();
   Screen.flip();
 }, 0);
