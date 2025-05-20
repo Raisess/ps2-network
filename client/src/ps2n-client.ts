@@ -1,5 +1,5 @@
 class GameData {
-  name: string;
+  constructor(public name: string) {}
 }
 
 export class PS2NetworkClient {
@@ -11,16 +11,29 @@ export class PS2NetworkClient {
     this.url = `http://${host}:${port}`;
   }
 
+  public ping(): string {
+    try {
+      const response = this.request.get(`${this.url}/ping`);
+      return response.text;
+    } catch {
+      console.log("[PS2NetworkClient]: Failed to ping server");
+      return 'Failed!';
+    }
+  }
+
   public listDownloads(): GameData[] {
     try {
       const response = this.request.get(`${this.url}/downloads`);
-      return JSON.parse(response.text);
+      return JSON.parse(response.text).map((item: any) => new GameData(
+        item.name,
+      ));
     } catch {
       console.log("[PS2NetworkClient]: Failed to list downloads");
       return [];
     }
   }
 
+  // @TODO: finish this
   public search(key: string): GameData[] {
     try {
       const response = this.request.get(`${this.url}/search?key=${key}`);

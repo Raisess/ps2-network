@@ -7,7 +7,10 @@ declare class Request {
 
   headers: Array<string>;
 
-  get(url: string): void;
+  get(url: string): {
+    status: number;
+    text: string;
+  };
 
   head(url: string): void;
 

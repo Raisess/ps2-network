@@ -42,6 +42,14 @@ main.addItem(new UIItem("My Downloads", (ctx) => {
   });
 }));
 
+// -------- PING SCREEN -------- //
+main.addItem(new UIItem("Ping Server", (ctx) => {
+  const pong = client.ping();
+  const to = ctx.parent.createComponent("ping", `Server ping: ${pong}`);
+  to.reset();
+  to.addItem(backToMainItem);
+}));
+
 ui.set("main");
 os.setInterval(() => {
   Screen.clear();
