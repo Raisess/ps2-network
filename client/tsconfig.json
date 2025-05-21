@@ -12,7 +12,6 @@
     "lib": ["ES6"],
     "strict": true /* Enable all strict type-checking options. */
   },
-
   "include": ["src/**/*", "@types/athena-env/*.d.ts"],
   "exclude": ["**/lib.dom.d.ts", "typescript/lib", "node_modules"]
 }
