@@ -68,7 +68,9 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
             target_dir_path.to_str().unwrap(),
             &converted_game_filename,
         ]);
-        std::fs::rename(extracted_path, destination_path).unwrap();
+
+        std::fs::copy(&extracted_path, &destination_path).unwrap();
+        std::fs::remove_file(&extracted_path).unwrap();
         println!("Installed!");
 
         println!("Downlading ART...");
