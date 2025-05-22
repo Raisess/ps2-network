@@ -62,6 +62,7 @@ declare const System: {
   sleep(sec: number): void;
   exitToBrowser(): void;
   setDarkMode(value: any): void;
+  loadELF(path: string): void;
 
   /**
    * @description It only works with SCPH-500XX and later models.

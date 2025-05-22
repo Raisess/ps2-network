@@ -48,6 +48,7 @@ const OFFSET = 30;
 export class UIItem {
   constructor(
     public readonly title: string,
+    public readonly description: string,
     private readonly action?: (ctx: AbstractUIComponent) => void,
   ) {
     this.title = title;
@@ -78,10 +79,13 @@ class UIComponent extends AbstractUIComponent {
         this.selected === index ? `> ${item.title}` : item.title,
       );
     })
+
+    const selected = this.items[this.selected];
+    this.font.print(0, (this.items.length * OFFSET) + OFFSET, selected.description);
   }
 
   private control(): void {
-    if (this.pad.justPressed(Pads.START)) {
+    if (this.pad.justPressed(Pads.CROSS)) {
       this.items[this.selected].handle(this);
     }
 
@@ -103,9 +107,12 @@ const LINE_COUNT = Math.ceil(VALUES.length / LINE_SIZE);
 
 class KeyboardUIComponent extends AbstractUIComponent {
   public buffer: string = "";
+
+  private back: string = "";
   private handler!: (value: string, ctx: KeyboardUIComponent) => void;
 
-  public setup(action: (value: string, ctx: KeyboardUIComponent) => void): void {
+  public setup(back: string, action: (value: string, ctx: KeyboardUIComponent) => void): void {
+    this.back = back;
     this.handler = action;
   }
 
@@ -114,20 +121,34 @@ class KeyboardUIComponent extends AbstractUIComponent {
     this.font.print(0, 0, `${this.title} ${this.buffer}`);
 
     for (let i = 0; i < LINE_COUNT; i++) {
-        const line = VALUES.slice(i * LINE_SIZE, (i + 1) * LINE_SIZE);
-        line.split('').forEach((v, j) => {
-          const x = j * OFFSET;
-          const y = OFFSET + (OFFSET * i);
-          // @TODO: calculate the selected value based on i and j
-          const value = VALUES[this.selected] === v ? `*${v}` : v;
-          this.font.print(x, i === 0 ? y + 10 : y, value);
-        });
+      const line = VALUES.slice(i * LINE_SIZE, (i + 1) * LINE_SIZE);
+      line.split('').forEach((v, j) => {
+        const x = j * OFFSET;
+        const y = OFFSET + (OFFSET * i);
+        // @TODO: calculate the selected value based on i and j
+        const value = VALUES[this.selected] === v ? `*${v}` : v;
+        this.font.print(x, i === 0 ? y + 10 : y, value);
+      });
     }
+
+    this.font.print(0, (LINE_COUNT * OFFSET) + OFFSET, "- SQUARE: Delete | CIRCLE: Back | CROSS: Select | START: Submit");
   }
 
   private control(): void {
     if (this.pad.justPressed(Pads.START)) {
       this.handler(VALUES[this.selected], this);
+    }
+
+    if (this.pad.justPressed(Pads.CROSS)) {
+      this.buffer += VALUES[this.selected];
+    }
+
+    if (this.pad.justPressed(Pads.SQUARE)) {
+      this.buffer = this.buffer.slice(0, this.buffer.length - 1);
+    }
+
+    if (this.pad.justPressed(Pads.CIRCLE)) {
+      this.parent.set(this.back)
     }
 
     if(this.pad.justPressed(Pads.UP)){
