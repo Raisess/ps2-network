@@ -1,7 +1,7 @@
 #! /usr/bin/env sh
 
 podman build -t ps2-network-server .
-podman run \
+podman container create \
   -p 8080:8080 \
   -e SOURCE_PATH=/media/source \
   -e TARGET_PATH=/media/target \
