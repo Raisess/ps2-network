@@ -16,32 +16,33 @@ pub struct ProcessDownloadOnQueueHandler {
     pub download_data: DownloadData,
 }
 
+// @TODO: implement a way to update download state
 #[async_trait::async_trait]
 impl Handler<()> for ProcessDownloadOnQueueHandler {
     async fn handle(&self) -> () {
         let game = &self.download_data;
-        println!("Processing: {:#?}", game);
+        tracing::info!("Processing: {:#?}", game);
 
-        println!("Downloading...");
+        tracing::info!("Downloading...");
         let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
         let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
-        println!("Downloaded!");
+        tracing::info!("Downloaded!");
 
-        println!("Extracting...");
+        tracing::info!("Extracting...");
         let file_stream = std::fs::File::open(&download_path).unwrap();
         let download_path_parent = download_path.parent().unwrap();
         zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
 
         std::fs::remove_file(&download_path).unwrap();
-        println!("Extracted!");
+        tracing::info!("Extracted!");
 
-        println!("Installing...");
+        tracing::info!("Installing...");
         let extracted_paths = match_extracted_paths(&download_path);
         if extracted_paths.len() > 1 {
             // @TODO: convert bin/cue to iso
             // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
             // @REF: http://he.fi/bchunk/
-            eprintln!("ERROR: Don't support bin/cue conversion");
+            tracing::error!("ERROR: Don't support bin/cue conversion");
             return ();
         }
 
@@ -73,9 +74,9 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
 
         std::fs::copy(&extracted_path, &destination_path).unwrap();
         std::fs::remove_file(&extracted_path).unwrap();
-        println!("Installed!");
+        tracing::info!("Installed!");
 
-        println!("Downlading ART...");
+        tracing::info!("Downlading ART...");
         let art_provider = InternetArchiveArtProvider;
         let art_data = art_provider.get(game_serial.as_str()).await;
         let art_dir_path = get_path_buf(vec![&Config::target_path(), "ART"]);
@@ -83,7 +84,6 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
             std::fs::create_dir(&art_dir_path).unwrap();
         }
 
-        println!("{:#?}", art_data);
         let bg_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
         let _ = HttpClient::download(&art_data.bg_url, &bg_art_path.to_string_lossy()).await;
 
@@ -92,9 +92,9 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
 
         let lgo_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.lgo_file]);
         let _ = HttpClient::download(&art_data.lgo_url, &lgo_art_path.to_string_lossy()).await;
-        println!("Downladed ART!");
+        tracing::info!("Downladed ART!");
 
-        println!("Done!");
+        tracing::info!("Done!");
     }
 }
 

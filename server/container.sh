@@ -3,6 +3,7 @@
 podman build -t ps2-network-server .
 podman container create \
   -p 8080:8080 \
+  -e RUST_LOG=info \
   -e SOURCE_PATH=/media/source \
   -e TARGET_PATH=/media/target \
   -v $(echo $PS2S_SOURCE_PATH):/media/source \

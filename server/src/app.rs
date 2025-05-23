@@ -22,6 +22,8 @@ impl App {
           .route("/download", axum::routing::get(download));
 
         let addr = format!("0.0.0.0:{}", self.port);
+        tracing::info!("Server listening at: {addr}");
+
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         axum::serve(listener, router).await.unwrap();
     }

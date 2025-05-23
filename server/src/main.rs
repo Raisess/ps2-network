@@ -11,6 +11,8 @@ async fn main() -> () {
     assert_ne!(Config::source_path(), "");
     assert_ne!(Config::target_path(), "");
 
+    tracing_subscriber::fmt::init();
+
     tokio::spawn(async {
         loop {
             // @TODO: remove queue and use mpsc channel with some persist data
