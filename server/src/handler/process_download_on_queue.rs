@@ -16,9 +16,12 @@ pub struct ProcessDownloadOnQueueHandler {
     pub download_data: DownloadData,
 }
 
-// @TODO: implement a way to update download state
+// @TODO: implement update on core::database
 #[async_trait::async_trait]
 impl Handler<()> for ProcessDownloadOnQueueHandler {
+    // @TODO: handle errors to not explode everything and revert on failure
+    // @TODO: add self.download_data.status
+    // @TODO: recover from self.download_data.status
     async fn handle(&self) -> () {
         let game = &self.download_data;
         tracing::info!("Processing: {:#?}", game);

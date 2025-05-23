@@ -35,7 +35,7 @@ main.addItem(new UIItem("Search Games", "- Search for games on the network", (ct
     to.addItem(backToMainItem);
     const results = client.search(encodeURIComponent(ctx.buffer))
     results.forEach((item) => {
-      to.addItem(new UIItem(item.name, "TODO", (ctx) => {
+      to.addItem(new UIItem(item.name, "TODO: add item description", (ctx) => {
         client.download(item.id);
         ctx.parent.set("main");
       }));
@@ -51,7 +51,7 @@ main.addItem(new UIItem("My Downloads", "- List all running downloads", (ctx) =>
 
   const downloads = client.listDownloads();
   downloads.forEach((download) => {
-    to.addItem(new UIItem(download.name, "TODO"));
+    to.addItem(new UIItem(download.name, "TODO: add download state"));
   });
 }));
 
