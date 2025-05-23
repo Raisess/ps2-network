@@ -23,7 +23,7 @@ impl HttpClient {
 
         let mut stream = reqwest::get(url).await?.bytes_stream();
         while let Some(bytes) = stream.next().await {
-          file.write_all(&bytes?)?;
+            file.write_all(&bytes?)?;
         }
 
         file.flush()?;

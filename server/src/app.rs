@@ -16,10 +16,10 @@ impl App {
 
     pub async fn listen(&self) -> () {
         let router = axum::Router::new()
-          .route("/ping", axum::routing::get(ping))
-          .route("/search", axum::routing::get(search))
-          .route("/downloads", axum::routing::get(list_downloads))
-          .route("/download", axum::routing::get(download));
+            .route("/ping", axum::routing::get(ping))
+            .route("/search", axum::routing::get(search))
+            .route("/downloads", axum::routing::get(list_downloads))
+            .route("/download", axum::routing::get(download));
 
         let addr = format!("0.0.0.0:{}", self.port);
         tracing::info!("Server listening at: {addr}");
