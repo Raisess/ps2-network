@@ -6,6 +6,7 @@ use server::core::queue::queue;
 use server::handler::process_download_on_queue::ProcessDownloadOnQueueHandler;
 use server::handler::Handler;
 
+// @TODO: remove actix and use tide
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     assert_ne!(Config::source_path(), "");
@@ -13,6 +14,7 @@ async fn main() -> std::io::Result<()> {
 
     actix_web::rt::spawn(async {
         loop {
+            // @TODO: remove queue and use mpsc channel with some persist data
             let clone_queue = queue().lock().unwrap().clone();
             match clone_queue.front() {
                 Some(download_data) => {

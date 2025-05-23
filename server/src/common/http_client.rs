@@ -1,3 +1,7 @@
+use std::io::{BufWriter, Write};
+
+use futures_util::StreamExt;
+
 pub struct HttpClient {
     __reqwest: reqwest::Client,
     host: String,
@@ -15,10 +19,14 @@ impl HttpClient {
         url: &str,
         destination_path: &str,
     ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let response = reqwest::get(url).await?;
-        let mut file = std::fs::File::create(destination_path)?;
-        let mut content = std::io::Cursor::new(response.bytes().await?);
-        std::io::copy(&mut content, &mut file)?;
+        let mut file = BufWriter::new(std::fs::File::create(destination_path)?);
+
+        let mut stream = reqwest::get(url).await?.bytes_stream();
+        while let Some(bytes) = stream.next().await {
+          file.write_all(&bytes?)?;
+        }
+
+        file.flush()?;
         Ok(())
     }
 

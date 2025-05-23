@@ -28,9 +28,9 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
         println!("Downloaded!");
 
         println!("Extracting...");
-        let file = std::fs::read(&download_path).unwrap();
+        let file_stream = std::fs::File::open(&download_path).unwrap();
         let download_path_parent = download_path.parent().unwrap();
-        zip_extract::extract(std::io::Cursor::new(file), &download_path_parent, true).unwrap();
+        zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
 
         std::fs::remove_file(&download_path).unwrap();
         println!("Extracted!");
@@ -39,6 +39,8 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
         let extracted_paths = match_extracted_paths(&download_path);
         if extracted_paths.len() > 1 {
             // @TODO: convert bin/cue to iso
+            // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
+            // @REF: http://he.fi/bchunk/
             eprintln!("ERROR: Don't support bin/cue conversion");
             return ();
         }
@@ -81,6 +83,7 @@ impl Handler<()> for ProcessDownloadOnQueueHandler {
             std::fs::create_dir(&art_dir_path).unwrap();
         }
 
+        println!("{:#?}", art_data);
         let bg_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
         let _ = HttpClient::download(&art_data.bg_url, &bg_art_path.to_string_lossy()).await;
 
