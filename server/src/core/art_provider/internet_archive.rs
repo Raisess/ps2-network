@@ -20,9 +20,9 @@ impl ArtProvider for InternetArchiveArtProvider {
         ArtData {
             bg_file: self.format_file(serial, "BG"),
             bg_url: self.format_url(serial, "BG_00"),
-            cov_file: self.format_url(serial, "COV"),
+            cov_file: self.format_file(serial, "COV"),
             cov_url: self.format_url(serial, "COV"),
-            lgo_file: self.format_url(serial, "LGO"),
+            lgo_file: self.format_file(serial, "LGO"),
             lgo_url: self.format_url(serial, "LGO"),
         }
     }
