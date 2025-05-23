@@ -6,13 +6,12 @@ use server::core::queue::queue;
 use server::handler::process_download_on_queue::ProcessDownloadOnQueueHandler;
 use server::handler::Handler;
 
-// @TODO: remove actix and use tide
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> () {
     assert_ne!(Config::source_path(), "");
     assert_ne!(Config::target_path(), "");
 
-    actix_web::rt::spawn(async {
+    tokio::spawn(async {
         loop {
             // @TODO: remove queue and use mpsc channel with some persist data
             let clone_queue = queue().lock().unwrap().clone();
@@ -25,7 +24,7 @@ async fn main() -> std::io::Result<()> {
                     queue().lock().unwrap().pop_front();
                 }
                 None => {
-                    actix_web::rt::time::sleep(Duration::from_millis(10)).await;
+                    tokio::time::sleep(Duration::from_millis(10)).await;
                 }
             }
         }
