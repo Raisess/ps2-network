@@ -1,6 +1,6 @@
 use crate::core::database;
 use crate::core::download_provider::crocdb::CrocdbDownloadProvider;
-use crate::core::download_provider::DownloadProvider;
+use crate::core::download_provider::{DownloadProvider, DownloadStatus};
 
 use super::Handler;
 
@@ -15,7 +15,8 @@ impl Handler<()> for AddDownloadToQueueHandler {
 
         if !database::exists(&game_id).await {
             let provider = CrocdbDownloadProvider::new();
-            let game_download_data = provider.get(game_id).await;
+            let mut game_download_data = provider.get(game_id).await;
+            game_download_data.status = Some(DownloadStatus::PENDING);
             database::insert(&game_id, &game_download_data).await;
         }
     }

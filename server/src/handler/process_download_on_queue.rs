@@ -5,7 +5,8 @@ use crate::common::config::Config;
 use crate::common::http_client::HttpClient;
 use crate::core::art_provider::internet_archive::InternetArchiveArtProvider;
 use crate::core::art_provider::ArtProvider;
-use crate::core::download_provider::DownloadData;
+use crate::core::database;
+use crate::core::download_provider::{DownloadData, DownloadStatus};
 
 use super::Handler;
 
@@ -16,88 +17,145 @@ pub struct ProcessDownloadOnQueueHandler {
     pub download_data: DownloadData,
 }
 
-// @TODO: implement update on core::database
 #[async_trait::async_trait]
 impl Handler<()> for ProcessDownloadOnQueueHandler {
     // @TODO: handle errors to not explode everything and revert on failure
-    // @TODO: add self.download_data.status
-    // @TODO: recover from self.download_data.status
     async fn handle(&self) -> () {
-        let game = &self.download_data;
-        tracing::info!("Processing: {:#?}", game);
+        let mut game = self.download_data.clone();
+        Self::process(&mut game).await;
+    }
+}
 
-        tracing::info!("Downloading...");
-        let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
-        let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
-        tracing::info!("Downloaded!");
+impl ProcessDownloadOnQueueHandler {
+    #[async_recursion::async_recursion]
+    async fn process(game: &mut DownloadData) -> () {
+        let step = game.status.clone().unwrap_or(DownloadStatus::PENDING);
+        tracing::info!("Processing: {}: {:?}", game.filename, step);
 
-        tracing::info!("Extracting...");
-        let file_stream = std::fs::File::open(&download_path).unwrap();
-        let download_path_parent = download_path.parent().unwrap();
-        zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
+        match step {
+            DownloadStatus::PENDING => {
+                game.step(DownloadStatus::DOWNLOADING);
+                database::insert(&game.id, &game).await;
+            }
+            DownloadStatus::DOWNLOADING => {
+                tracing::info!("Downloading...");
 
-        std::fs::remove_file(&download_path).unwrap();
-        tracing::info!("Extracted!");
+                // @TODO: delete file if already exists
+                let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
+                tracing::info!("Downloaded!");
 
-        tracing::info!("Installing...");
-        let extracted_paths = match_extracted_paths(&download_path);
-        if extracted_paths.len() > 1 {
-            // @TODO: convert bin/cue to iso
-            // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
-            // @REF: http://he.fi/bchunk/
-            tracing::error!("ERROR: Don't support bin/cue conversion");
-            return ();
+                game.step(DownloadStatus::EXTRACTING);
+                database::insert(&game.id, &game).await;
+            }
+            DownloadStatus::EXTRACTING => {
+                tracing::info!("Extracting...");
+
+                // @TODO: delete extracted files if already exists
+                let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                let file_stream = std::fs::File::open(&download_path).unwrap();
+                let download_path_parent = download_path.parent().unwrap();
+                zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
+
+                std::fs::remove_file(&download_path).unwrap();
+                tracing::info!("Extracted!");
+
+                game.step(DownloadStatus::INSTALLING);
+                database::insert(&game.id, &game).await;
+            }
+            DownloadStatus::INSTALLING => {
+                tracing::info!("Installing...");
+
+                let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                let extracted_paths = match_extracted_paths(&download_path);
+                if extracted_paths.len() > 1 {
+                    // @TODO: convert bin/cue to iso
+                    // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
+                    // @REF: http://he.fi/bchunk/
+                    tracing::error!("ERROR: Don't support bin/cue conversion");
+                    return ();
+                }
+
+                let extracted_path = extracted_paths[0].clone();
+                let target_dir =
+                    if std::fs::metadata(&extracted_path).unwrap().len() > MAXIMUM_CD_SIZE_BYTES {
+                        "DVD"
+                    } else {
+                        "CD"
+                    };
+                let target_dir_path =
+                    get_path_buf(vec![&Config::target_path(), &target_dir.to_string()]);
+                if !target_dir_path.is_dir() {
+                    std::fs::create_dir(&target_dir_path).unwrap();
+                }
+
+                let game_serial = extract_game_serial_from_iso(&extracted_path);
+                let game_filename = extracted_path
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string();
+
+                let converted_game_filename =
+                    get_normalized_filename_for_opl(&game_serial, &game_filename);
+                let destination_path = get_path_buf(vec![
+                    target_dir_path.to_str().unwrap(),
+                    &converted_game_filename,
+                ]);
+
+                // @TODO: delete file if already exists
+                std::fs::copy(&extracted_path, &destination_path).unwrap();
+                std::fs::remove_file(&extracted_path).unwrap();
+                tracing::info!("Installed!");
+
+                game.serial = Some(game_serial);
+                game.step(DownloadStatus::DOWNLOADINGART);
+                database::insert(&game.id, &game).await;
+            }
+            DownloadStatus::DOWNLOADINGART => {
+                tracing::info!("Downloading ART...");
+
+                let game_serial = game
+                    .serial
+                    .as_ref()
+                    .expect("For some reason your download do not have a serial code");
+
+                let art_provider = InternetArchiveArtProvider;
+                let art_data = art_provider.get(&game_serial).await;
+                let art_dir_path = get_path_buf(vec![&Config::target_path(), "ART"]);
+                if !art_dir_path.is_dir() {
+                    std::fs::create_dir(&art_dir_path).unwrap();
+                }
+
+                // @TODO: delete files if already exists
+                let bg_art_path =
+                    get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
+                let _ =
+                    HttpClient::download(&art_data.bg_url, &bg_art_path.to_string_lossy()).await;
+
+                let cov_art_path =
+                    get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.cov_file]);
+                let _ =
+                    HttpClient::download(&art_data.cov_url, &cov_art_path.to_string_lossy()).await;
+
+                let lgo_art_path =
+                    get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.lgo_file]);
+                let _ =
+                    HttpClient::download(&art_data.lgo_url, &lgo_art_path.to_string_lossy()).await;
+                tracing::info!("Downloaded ART!");
+
+                game.step(DownloadStatus::DONE);
+                database::insert(&game.id, &game).await;
+            }
+            DownloadStatus::DONE => {
+                database::remove(&game.id).await;
+                tracing::info!("Done!");
+                return ();
+            }
         }
 
-        let extracted_path = extracted_paths[0].clone();
-        let target_dir =
-            if std::fs::metadata(&extracted_path).unwrap().len() > MAXIMUM_CD_SIZE_BYTES {
-                "DVD"
-            } else {
-                "CD"
-            };
-        let target_dir_path = get_path_buf(vec![&Config::target_path(), &target_dir.to_string()]);
-        if !target_dir_path.is_dir() {
-            std::fs::create_dir(&target_dir_path).unwrap();
-        }
-
-        let game_serial = extract_game_serial_from_iso(&extracted_path);
-        let game_filename = extracted_path
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        let converted_game_filename = get_normalized_filename_for_opl(&game_serial, &game_filename);
-        let destination_path = get_path_buf(vec![
-            target_dir_path.to_str().unwrap(),
-            &converted_game_filename,
-        ]);
-
-        std::fs::copy(&extracted_path, &destination_path).unwrap();
-        std::fs::remove_file(&extracted_path).unwrap();
-        tracing::info!("Installed!");
-
-        tracing::info!("Downlading ART...");
-        let art_provider = InternetArchiveArtProvider;
-        let art_data = art_provider.get(game_serial.as_str()).await;
-        let art_dir_path = get_path_buf(vec![&Config::target_path(), "ART"]);
-        if !art_dir_path.is_dir() {
-            std::fs::create_dir(&art_dir_path).unwrap();
-        }
-
-        let bg_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
-        let _ = HttpClient::download(&art_data.bg_url, &bg_art_path.to_string_lossy()).await;
-
-        let cov_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.cov_file]);
-        let _ = HttpClient::download(&art_data.cov_url, &cov_art_path.to_string_lossy()).await;
-
-        let lgo_art_path = get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.lgo_file]);
-        let _ = HttpClient::download(&art_data.lgo_url, &lgo_art_path.to_string_lossy()).await;
-        tracing::info!("Downladed ART!");
-
-        tracing::info!("Done!");
+        Self::process(game).await;
     }
 }
 

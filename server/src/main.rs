@@ -1,7 +1,7 @@
 use server::app::App;
 use server::common::config::Config;
 use server::core::database;
-use server::core::download_provider::DownloadData;
+use server::core::download_provider::{DownloadData, DownloadStatus};
 use server::handler::process_download_on_queue::ProcessDownloadOnQueueHandler;
 use server::handler::Handler;
 
@@ -13,11 +13,23 @@ async fn main() -> () {
     tracing_subscriber::fmt::init();
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<DownloadData>(100);
+    let previous_added_downloads = database::list().await;
+    for previous_added_download in previous_added_downloads {
+        tx.send(previous_added_download).await.unwrap();
+    }
+
     tokio::spawn(async move {
         loop {
             match database::first().await {
                 Some(game_download_data) => {
-                    tx.send(game_download_data).await.unwrap();
+                    let is_peding = game_download_data
+                        .status
+                        .as_ref()
+                        .is_some_and(|i| *i == DownloadStatus::PENDING);
+                    if is_peding {
+                        println!("tx::send: {:#?}", game_download_data);
+                        tx.send(game_download_data).await.unwrap();
+                    }
                 }
                 None => {}
             }
@@ -33,8 +45,6 @@ async fn main() -> () {
                     download_data: download_data.clone(),
                 };
                 handler.handle().await;
-
-                database::remove(&download_data.id.as_str()).await;
             }
             None => {}
         }

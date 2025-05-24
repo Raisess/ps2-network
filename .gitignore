@@ -1,4 +1,5 @@
 /server/target
+/server/data.redb
 
 /client/node_modules
 /client/dist

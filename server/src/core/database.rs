@@ -9,13 +9,7 @@ static DB: OnceLock<Mutex<Database>> = OnceLock::new();
 static TABLE: TableDefinition<&str, String> = TableDefinition::new("ps2-network-server-db");
 
 fn database() -> &'static Mutex<Database> {
-    DB.get_or_init(|| {
-        Mutex::new({
-            // @TODO: add persistency
-            let file = tempfile::NamedTempFile::new().unwrap();
-            Database::create(file.path()).unwrap()
-        })
-    })
+    DB.get_or_init(|| Mutex::new(Database::create("data.redb").unwrap()))
 }
 
 pub async fn insert(key: &str, data: &DownloadData) -> () {

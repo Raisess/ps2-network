@@ -48,6 +48,8 @@ impl DownloadProvider for CrocdbDownloadProvider {
                     host: item.links[0].host.clone(),
                     size: item.links[0].size.clone(),
                     url: item.links[0].url.clone(),
+                    serial: None,
+                    status: None,
                 })
                 .collect(),
         }
@@ -70,6 +72,8 @@ impl DownloadProvider for CrocdbDownloadProvider {
                 host: response.data.entry.links[0].host.clone(),
                 size: response.data.entry.links[0].size.clone(),
                 url: response.data.entry.links[0].url.clone(),
+                serial: None,
+                status: None,
             },
         }
     }
