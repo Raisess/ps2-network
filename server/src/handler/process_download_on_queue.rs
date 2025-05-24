@@ -30,7 +30,7 @@ impl ProcessDownloadOnQueueHandler {
     #[async_recursion::async_recursion]
     async fn process(game: &mut DownloadData) -> () {
         let step = game.status.clone().unwrap_or(DownloadStatus::PENDING);
-        tracing::info!("Processing: {}: {:?}", game.filename, step);
+        tracing::info!(game.id, "processing: {}: {:?}", game.filename, step);
 
         match step {
             DownloadStatus::PENDING => {
@@ -38,18 +38,18 @@ impl ProcessDownloadOnQueueHandler {
                 database::insert(&game.id, &game).await;
             }
             DownloadStatus::DOWNLOADING => {
-                tracing::info!("Downloading...");
+                tracing::info!(game.id, "downloading...");
 
                 // @TODO: delete file if already exists
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
                 let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
-                tracing::info!("Downloaded!");
+                tracing::info!(game.id, "downloaded!");
 
                 game.step(DownloadStatus::EXTRACTING);
                 database::insert(&game.id, &game).await;
             }
             DownloadStatus::EXTRACTING => {
-                tracing::info!("Extracting...");
+                tracing::info!(game.id, "extracting...");
 
                 // @TODO: delete extracted files if already exists
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
@@ -58,13 +58,13 @@ impl ProcessDownloadOnQueueHandler {
                 zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
 
                 std::fs::remove_file(&download_path).unwrap();
-                tracing::info!("Extracted!");
+                tracing::info!(game.id, "extracted!");
 
                 game.step(DownloadStatus::INSTALLING);
                 database::insert(&game.id, &game).await;
             }
             DownloadStatus::INSTALLING => {
-                tracing::info!("Installing...");
+                tracing::info!(game.id, "installing...");
 
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
                 let extracted_paths = match_extracted_paths(&download_path);
@@ -72,7 +72,7 @@ impl ProcessDownloadOnQueueHandler {
                     // @TODO: convert bin/cue to iso
                     // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
                     // @REF: http://he.fi/bchunk/
-                    tracing::error!("ERROR: Don't support bin/cue conversion");
+                    tracing::error!(game.id, "ERROR: Don't support bin/cue conversion");
                     return ();
                 }
 
@@ -107,14 +107,14 @@ impl ProcessDownloadOnQueueHandler {
                 // @TODO: delete file if already exists
                 std::fs::copy(&extracted_path, &destination_path).unwrap();
                 std::fs::remove_file(&extracted_path).unwrap();
-                tracing::info!("Installed!");
+                tracing::info!(game.id, "installed!");
 
                 game.serial = Some(game_serial);
                 game.step(DownloadStatus::DOWNLOADINGART);
                 database::insert(&game.id, &game).await;
             }
             DownloadStatus::DOWNLOADINGART => {
-                tracing::info!("Downloading ART...");
+                tracing::info!(game.id, "downloading ART...");
 
                 let game_serial = game
                     .serial
@@ -143,14 +143,14 @@ impl ProcessDownloadOnQueueHandler {
                     get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.lgo_file]);
                 let _ =
                     HttpClient::download(&art_data.lgo_url, &lgo_art_path.to_string_lossy()).await;
-                tracing::info!("Downloaded ART!");
+                tracing::info!(game.id, "downloaded ART!");
 
                 game.step(DownloadStatus::DONE);
                 database::insert(&game.id, &game).await;
             }
             DownloadStatus::DONE => {
                 database::remove(&game.id).await;
-                tracing::info!("Done!");
+                tracing::info!(game.id, "done!");
                 return ();
             }
         }

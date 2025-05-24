@@ -27,7 +27,6 @@ async fn main() -> () {
                         .as_ref()
                         .is_some_and(|i| *i == DownloadStatus::PENDING);
                     if is_peding {
-                        println!("tx::send: {:#?}", game_download_data);
                         tx.send(game_download_data).await.unwrap();
                     }
                 }
