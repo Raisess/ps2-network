@@ -1,5 +1,5 @@
 class GameData {
-  constructor(public id: string, public name: string) {}
+  constructor(public id: string, public name: string, public status: string, public size: number) {}
 }
 
 export class PS2NetworkClient {
@@ -24,10 +24,7 @@ export class PS2NetworkClient {
   public listDownloads(): GameData[] {
     try {
       const response = this.request.get(`${this.url}/downloads`);
-      return JSON.parse(response.text).map((item: any) => new GameData(
-        item.id,
-        item.name,
-      ));
+      return this.format(response.text);
     } catch {
       console.log("[PS2NetworkClient]: Failed to list downloads");
       return [];
@@ -37,10 +34,7 @@ export class PS2NetworkClient {
   public search(key: string): GameData[] {
     try {
       const response = this.request.get(`${this.url}/search?key=${key}`);
-      return JSON.parse(response.text).map((item: any) => new GameData(
-        item.id,
-        item.name,
-      ));
+      return this.format(response.text);
     } catch {
       console.log("[PS2NetworkClient]: Failed to search");
       return [];
@@ -53,5 +47,14 @@ export class PS2NetworkClient {
     } catch {
       console.log("[PS2NetworkClient]: Failed to download");
     }
+  }
+
+  private format(text: string): GameData[] {
+    return JSON.parse(text).map((item: any) => new GameData(
+      item.id,
+      item.name,
+      item.status,
+      item.size,
+    ));
   }
 }
