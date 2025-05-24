@@ -36,7 +36,7 @@ main.addItem(new UIItem("Search Games", "- Search for games on the network", (ct
     const results = client.search(encodeURIComponent(ctx.buffer))
     results.forEach((item) => {
       const size = item.size / 1_000_000_000;
-      to.addItem(new UIItem(item.name, `- Size: ${size}GB`, (ctx) => {
+      to.addItem(new UIItem(item.name, `- Size: ${size.toFixed(2)}GB`, (ctx) => {
         client.download(item.id);
         ctx.parent.set("main");
       }));
@@ -53,7 +53,7 @@ main.addItem(new UIItem("My Downloads", "- List all running downloads", (ctx) =>
   const downloads = client.listDownloads();
   downloads.forEach((download) => {
     const size = download.size / 1_000_000_000;
-    to.addItem(new UIItem(download.name, `- Size: ${size}GB | Status: ${download.status}`));
+    to.addItem(new UIItem(download.name, `- Size: ${size.toFixed(2)}GB | Status: ${download.status}`));
   });
 }));
 
