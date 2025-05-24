@@ -3,6 +3,7 @@ use crate::core::download_provider::{DownloadData, DownloadProvider};
 
 use super::Handler;
 
+// @TODO: implement pagination
 pub struct ListGamesHandler {
     pub search_key: String,
 }
