@@ -40,8 +40,11 @@ impl ProcessDownloadOnQueueHandler {
             DownloadStatus::DOWNLOADING => {
                 tracing::info!(game.id, "downloading...");
 
-                // @TODO: delete file if already exists
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                if download_path.is_file() {
+                    std::fs::remove_file(&download_path).unwrap();
+                }
+
                 let _ = HttpClient::download(&game.url, &download_path.to_str().unwrap()).await;
                 tracing::info!(game.id, "downloaded!");
 
@@ -51,8 +54,12 @@ impl ProcessDownloadOnQueueHandler {
             DownloadStatus::EXTRACTING => {
                 tracing::info!(game.id, "extracting...");
 
-                // @TODO: delete extracted files if already exists
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                let extracted_paths = match_extracted_paths(&download_path);
+                for extracted_path in extracted_paths {
+                    std::fs::remove_file(extracted_path).unwrap();
+                }
+
                 let file_stream = std::fs::File::open(&download_path).unwrap();
                 let download_path_parent = download_path.parent().unwrap();
                 zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
@@ -104,7 +111,10 @@ impl ProcessDownloadOnQueueHandler {
                     &converted_game_filename,
                 ]);
 
-                // @TODO: delete file if already exists
+                if destination_path.is_file() {
+                    std::fs::remove_file(&destination_path).unwrap();
+                }
+
                 std::fs::copy(&extracted_path, &destination_path).unwrap();
                 std::fs::remove_file(&extracted_path).unwrap();
                 tracing::info!(game.id, "installed!");
@@ -128,7 +138,6 @@ impl ProcessDownloadOnQueueHandler {
                     std::fs::create_dir(&art_dir_path).unwrap();
                 }
 
-                // @TODO: delete files if already exists
                 let bg_art_path =
                     get_path_buf(vec![&art_dir_path.to_string_lossy(), &art_data.bg_file]);
                 let _ =
