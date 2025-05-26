@@ -11,19 +11,19 @@ async fn main() -> () {
 
     tracing_subscriber::fmt::init();
 
-    let previous_added_downloads = database::list().await;
-    for download_data in previous_added_downloads {
-        let handler = ProcessDownloadOnQueueHandler { download_data };
-        handler.handle().await;
-    }
+    tokio::spawn(async move {
+        let previous_added_downloads = database::list().await;
+        for download_data in previous_added_downloads {
+            let handler = ProcessDownloadOnQueueHandler { download_data };
+            handler.handle().await;
+        }
+    });
 
     tokio::spawn(async move {
         loop {
             match database::first().await {
                 Some(download_data) => {
-                    let handler = ProcessDownloadOnQueueHandler {
-                        download_data: download_data.clone(),
-                    };
+                    let handler = ProcessDownloadOnQueueHandler { download_data };
                     handler.handle().await;
                 }
                 None => {}
