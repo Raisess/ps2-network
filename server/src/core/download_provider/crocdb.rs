@@ -20,16 +20,23 @@ impl CrocdbDownloadProvider {
 #[async_trait::async_trait]
 impl DownloadProvider for CrocdbDownloadProvider {
     // @TODO: improve error handling to not panic
-    async fn list(&self, search_key: &str) -> Vec<DownloadData> {
+    async fn list(
+        &self,
+        search_key: &str,
+        page: Option<u8>,
+        page_size: Option<u8>,
+    ) -> Vec<DownloadData> {
         let payload = r#"
           {
             "search_key": "{search_key}",
             "platforms": ["ps2"],
-            "max_results": 5,
-            "page": 1
+            "max_results": {page_size},
+            "page": {page}
           }
         "#
-        .replace("{search_key}", search_key);
+        .replace("{search_key}", search_key)
+        .replace("{page_size}", &page_size.unwrap_or(10).to_string())
+        .replace("{page}", &page.unwrap_or(1).to_string());
 
         match self
             .http_client

@@ -12,6 +12,6 @@ pub struct ListGamesHandler {
 impl Handler<Vec<DownloadData>> for ListGamesHandler {
     async fn handle(&self) -> Vec<DownloadData> {
         let provider = CrocdbDownloadProvider::new();
-        provider.list(&self.search_key).await
+        provider.list(&self.search_key, None, None).await
     }
 }

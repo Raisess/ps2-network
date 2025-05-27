@@ -33,7 +33,12 @@ impl DownloadData {
 #[async_trait::async_trait]
 pub trait DownloadProvider {
     // @TODO: improve error handling to not panic
-    async fn list(&self, search_key: &str) -> Vec<DownloadData>;
+    async fn list(
+        &self,
+        search_key: &str,
+        page: Option<u8>,
+        page_size: Option<u8>,
+    ) -> Vec<DownloadData>;
     // @TODO: improve error handling to not panic
     async fn get(&self, id: &str) -> DownloadData;
 }
