@@ -55,6 +55,12 @@ impl ProcessDownloadOnQueueHandler {
                 tracing::info!(game.id, "extracting...");
 
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
+                if !download_path.is_file() {
+                    tracing::error!(game.id, "download file not found, aborting...");
+                    database::remove(&game.id).await;
+                    return ();
+                }
+
                 let extracted_paths = match_extracted_paths(&download_path);
                 for extracted_path in extracted_paths {
                     std::fs::remove_file(extracted_path).unwrap();
