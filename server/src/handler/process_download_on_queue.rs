@@ -55,26 +55,23 @@ impl ProcessDownloadOnQueueHandler {
                 tracing::info!(game.id, "extracting...");
 
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
-                if !download_path.is_file() {
-                    tracing::error!(game.id, "download file not found, aborting...");
-                    database::remove(&game.id).await;
-                    return ();
-                }
+                match std::fs::File::open(&download_path) {
+                    Ok(file_stream) => {
+                        let download_path_parent = download_path.parent().unwrap();
+                        zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
 
-                let extracted_paths = match_extracted_paths(&download_path);
-                for extracted_path in extracted_paths {
-                    std::fs::remove_file(extracted_path).unwrap();
-                }
+                        std::fs::remove_file(&download_path).unwrap();
+                        tracing::info!(game.id, "extracted!");
 
-                let file_stream = std::fs::File::open(&download_path).unwrap();
-                let download_path_parent = download_path.parent().unwrap();
-                zip_extract::extract(file_stream, &download_path_parent, true).unwrap();
-
-                std::fs::remove_file(&download_path).unwrap();
-                tracing::info!(game.id, "extracted!");
-
-                game.step(DownloadStatus::INSTALLING);
-                database::insert(&game.id, &game).await;
+                        game.step(DownloadStatus::INSTALLING);
+                        database::insert(&game.id, &game).await;
+                    }
+                    Err(error) => {
+                        tracing::error!(game.id, "failed to open file {error}");
+                        database::remove(&game.id).await;
+                        return ();
+                    }
+                };
             }
             DownloadStatus::INSTALLING => {
                 tracing::info!(game.id, "installing...");
