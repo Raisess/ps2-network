@@ -80,28 +80,28 @@ impl ProcessDownloadOnQueueHandler {
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
                 let extracted_paths = match_extracted_paths(&download_path);
                 if extracted_paths.len() > 1 {
-                    let base_game_path = download_path
-                        .to_string_lossy()
-                        .replace(COMPRESSED_FILE_EXT, "");
+                    let result = unsafe {
+                        let base_game_path = download_path
+                            .to_string_lossy()
+                            .replace(COMPRESSED_FILE_EXT, "");
 
-                    let cuefile_path =
-                        std::ffi::CString::new(format!("{base_game_path}.cue")).unwrap();
-                    let binfile_path =
-                        std::ffi::CString::new(format!("{base_game_path}.bin")).unwrap();
-                    let outfile_path = std::ffi::CString::new(base_game_path).unwrap();
+                        let cuefile_path =
+                            std::ffi::CString::new(format!("{base_game_path}.cue")).unwrap();
+                        let binfile_path =
+                            std::ffi::CString::new(format!("{base_game_path}.bin")).unwrap();
+                        let outfile_path = std::ffi::CString::new(base_game_path).unwrap();
 
-                    unsafe {
-                        let result = bchunk(
+                        bchunk(
                             cuefile_path.as_ptr(),
                             binfile_path.as_ptr(),
                             outfile_path.as_ptr(),
-                        );
+                        )
+                    };
 
-                        if result != 0 {
-                            tracing::error!(game.id, "ERROR: Failed in bin/cue conversion");
-                            database::remove(&game.id).await;
-                            return ();
-                        }
+                    if result != 0 {
+                        tracing::error!(game.id, "ERROR: Failed in bin/cue conversion");
+                        database::remove(&game.id).await;
+                        return ();
                     }
                 }
 
