@@ -103,6 +103,10 @@ impl ProcessDownloadOnQueueHandler {
                         database::remove(&game.id).await;
                         return ();
                     }
+
+                    for extracted_path in extracted_paths {
+                        std::fs::remove_file(&extracted_path).unwrap();
+                    }
                 }
 
                 let iso_path = get_path_buf(vec![
@@ -126,16 +130,16 @@ impl ProcessDownloadOnQueueHandler {
 
                 let converted_game_filename =
                     get_normalized_filename_for_opl(&game_serial, &game_filename);
-                let destination_path = get_path_buf(vec![
+                let iso_destination_path = get_path_buf(vec![
                     target_dir_path.to_str().unwrap(),
                     &converted_game_filename,
                 ]);
 
-                if destination_path.is_file() {
-                    std::fs::remove_file(&destination_path).unwrap();
+                if iso_destination_path.is_file() {
+                    std::fs::remove_file(&iso_destination_path).unwrap();
                 }
 
-                std::fs::copy(&iso_path, &destination_path).unwrap();
+                std::fs::copy(&iso_path, &iso_destination_path).unwrap();
                 std::fs::remove_file(&iso_path).unwrap();
                 tracing::info!(game.id, "installed!");
 
