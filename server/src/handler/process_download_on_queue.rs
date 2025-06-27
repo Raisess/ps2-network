@@ -7,6 +7,7 @@ use crate::core::art_provider::internet_archive::InternetArchiveArtProvider;
 use crate::core::art_provider::ArtProvider;
 use crate::core::database;
 use crate::core::download_provider::{DownloadData, DownloadStatus};
+use crate::core::external::bchunk::bchunk;
 
 use super::Handler;
 
@@ -79,16 +80,37 @@ impl ProcessDownloadOnQueueHandler {
                 let download_path = get_path_buf(vec![&Config::source_path(), &game.filename]);
                 let extracted_paths = match_extracted_paths(&download_path);
                 if extracted_paths.len() > 1 {
-                    // @TODO: convert bin/cue to iso
-                    // @REF: https://en.wikipedia.org/wiki/Cue_sheet_(computing)
-                    // @REF: http://he.fi/bchunk/
-                    tracing::error!(game.id, "ERROR: Don't support bin/cue conversion");
-                    return ();
+                    let base_game_path = download_path
+                        .to_string_lossy()
+                        .replace(COMPRESSED_FILE_EXT, "");
+
+                    let cuefile_path =
+                        std::ffi::CString::new(format!("{base_game_path}.cue")).unwrap();
+                    let binfile_path =
+                        std::ffi::CString::new(format!("{base_game_path}.bin")).unwrap();
+                    let outfile_path = std::ffi::CString::new(base_game_path).unwrap();
+
+                    unsafe {
+                        let result = bchunk(
+                            cuefile_path.as_ptr(),
+                            binfile_path.as_ptr(),
+                            outfile_path.as_ptr(),
+                        );
+
+                        if result != 0 {
+                            tracing::error!(game.id, "ERROR: Failed in bin/cue conversion");
+                            database::remove(&game.id).await;
+                            return ();
+                        }
+                    }
                 }
 
-                let extracted_path = extracted_paths[0].clone();
+                let iso_path = get_path_buf(vec![
+                    &Config::source_path(),
+                    &game.filename.replace(COMPRESSED_FILE_EXT, ".iso"),
+                ]);
                 let target_dir =
-                    if std::fs::metadata(&extracted_path).unwrap().len() > MAXIMUM_CD_SIZE_BYTES {
+                    if std::fs::metadata(&iso_path).unwrap().len() > MAXIMUM_CD_SIZE_BYTES {
                         "DVD"
                     } else {
                         "CD"
@@ -99,13 +121,8 @@ impl ProcessDownloadOnQueueHandler {
                     std::fs::create_dir(&target_dir_path).unwrap();
                 }
 
-                let game_serial = extract_game_serial_from_iso(&extracted_path);
-                let game_filename = extracted_path
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_string();
+                let game_serial = extract_game_serial_from_iso(&iso_path);
+                let game_filename = iso_path.file_name().unwrap().to_str().unwrap().to_string();
 
                 let converted_game_filename =
                     get_normalized_filename_for_opl(&game_serial, &game_filename);
@@ -118,8 +135,8 @@ impl ProcessDownloadOnQueueHandler {
                     std::fs::remove_file(&destination_path).unwrap();
                 }
 
-                std::fs::copy(&extracted_path, &destination_path).unwrap();
-                std::fs::remove_file(&extracted_path).unwrap();
+                std::fs::copy(&iso_path, &destination_path).unwrap();
+                std::fs::remove_file(&iso_path).unwrap();
                 tracing::info!(game.id, "installed!");
 
                 game.serial = Some(game_serial);
@@ -191,8 +208,8 @@ fn get_normalized_filename_for_opl(game_serial: &String, filename: &String) -> S
     format!("{game_serial}.{game_filename}.iso")
 }
 
-fn extract_game_serial_from_iso(extracted_path: &Path) -> String {
-    let file = std::fs::File::open(extracted_path).unwrap();
+fn extract_game_serial_from_iso(iso_path: &Path) -> String {
+    let file = std::fs::File::open(iso_path).unwrap();
     let iso = cdfs::ISO9660::new(file).unwrap();
 
     let mut buffer = String::new();
@@ -209,8 +226,7 @@ fn extract_game_serial_from_iso(extracted_path: &Path) -> String {
 
 fn match_extracted_paths(download_path: &Path) -> Vec<PathBuf> {
     let filename = download_path
-        .to_str()
-        .unwrap()
+        .to_string_lossy()
         .replace(COMPRESSED_FILE_EXT, "");
 
     let parent_path = download_path.parent().unwrap();

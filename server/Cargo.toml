@@ -3,6 +3,9 @@ name = "server"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+cc = "1.2.27"
+
 [dependencies]
 async-recursion = "1.1.1"
 async-trait = "0.1.88"
