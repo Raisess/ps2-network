@@ -2,7 +2,7 @@ import { PS2NetworkClient } from "./ps2n-client";
 import { UI, UIItem } from "./ui";
 
 // @TODO: read this from config.txt file
-const SERVER_IP = "192.168.3.10";
+const SERVER_IP = "192.168.3.143";
 const SERVER_PORT = 8080;
 
 console.log("INITING NET...");

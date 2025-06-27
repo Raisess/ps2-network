@@ -1,4 +1,4 @@
-FROM rust:1.87-slim-bullseye
+FROM docker.io/library/rust:1.87-slim-bullseye
 
 RUN apt-get update
 RUN apt-get install -y \
