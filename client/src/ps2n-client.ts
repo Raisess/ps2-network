@@ -3,6 +3,19 @@ class GameData {
 }
 
 export class PS2NetworkClient {
+  public static getServerIp(defaultIp: string): string {
+    const exists = std.exists("ip.txt");
+    if (!exists) return defaultIp
+
+    const file = std.open("ip.txt", "r");
+    const ip = file.readAsString().trim();
+    return ip;
+  }
+
+  public static ipFromMask(mask: string, a: string, b: string): string {
+    return mask.replace("{0}", a).replace("{1}", b);
+  }
+
   private readonly request: Request;
   private readonly url: string;
 

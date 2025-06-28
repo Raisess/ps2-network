@@ -1,8 +1,10 @@
 import { PS2NetworkClient } from "./ps2n-client";
 import { UI, UIItem } from "./ui";
 
-// @TODO: read this from config.txt file
-const SERVER_IP = "192.168.3.143";
+const IP_MASK = "192.168.{0}.{1}";
+const SERVER_IP = PS2NetworkClient.getServerIp(
+  PS2NetworkClient.ipFromMask(IP_MASK, "1", "10")
+);
 const SERVER_PORT = 8080;
 
 console.log("INITING NET...");
@@ -15,7 +17,7 @@ font.scale = 0.7;
 const pad = Pads.get();
 pad.setEventHandler();
 
-const client = new PS2NetworkClient(SERVER_IP, SERVER_PORT)
+const client = new PS2NetworkClient(SERVER_IP, SERVER_PORT);
 const ui = new UI(font, pad);
 
 const backToMainItem = new UIItem("Back", "- Back to previous menu", (ctx) => {
