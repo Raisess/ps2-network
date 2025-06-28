@@ -21,7 +21,7 @@ const client = new PS2NetworkClient(SERVER_IP, SERVER_PORT);
 const ui = new UI(font, pad);
 
 const backToMainItem = new UIItem("Back", "- Back to previous menu", (ctx) => {
-  ctx.parent.set("main");
+  ctx.ui.set("main");
 });
 
 // -------- MAIN SCREEN -------- //
@@ -29,18 +29,18 @@ const main = ui.createComponent("main", `PS2 Network: ${SERVER_IP}:${SERVER_PORT
 
 // -------- SEARCH SCREEN -------- //
 main.addItem(new UIItem("Search Games", "- Search for games on the network", (ctx) => {
-  const to = ctx.parent.createKeyboardComponent();
+  const to = ctx.ui.createKeyboardComponent();
   to.setup("main", (_value, ctx) => {
     console.log(ctx.buffer.length, ctx.buffer);
     // -------- SEARCH RESULTS SUBSCREEN -------- //
-    const to = ctx.parent.createComponent("results", "Results");
+    const to = ctx.ui.createComponent("results", "Results");
     to.addItem(backToMainItem);
     const results = client.search(encodeURIComponent(ctx.buffer))
     results.forEach((item) => {
       const size = item.size / 1_000_000_000;
       to.addItem(new UIItem(item.name, `- Size: ${size.toFixed(2)}GB`, (ctx) => {
         client.download(item.id);
-        ctx.parent.set("main");
+        ctx.ui.set("main");
       }));
     });
     ctx.buffer = "";
@@ -49,7 +49,7 @@ main.addItem(new UIItem("Search Games", "- Search for games on the network", (ct
 
 // -------- DOWNLOADS SCREEN -------- //
 main.addItem(new UIItem("My Downloads", "- List all running downloads", (ctx) => {
-  const to = ctx.parent.createComponent("downloads", "Downloads");
+  const to = ctx.ui.createComponent("downloads", "Downloads");
   to.addItem(backToMainItem);
 
   const downloads = client.listDownloads();
@@ -62,7 +62,12 @@ main.addItem(new UIItem("My Downloads", "- List all running downloads", (ctx) =>
 // -------- PING SCREEN -------- //
 main.addItem(new UIItem("Ping Server", "- Sends a ping message to test the server", (ctx) => {
   const pong = client.ping();
-  const to = ctx.parent.createComponent("ping", `Server ping: ${pong}`);
+  const to = ctx.ui.createComponent("ping", `Server ping: ${pong}`);
+  to.addItem(new UIItem("Address Lookup", "Search for the server on your network", (ctx) => {
+    const to = ctx.ui.createComponent("Address Lookup", "Looking up for address please wait...");
+    // @TODO: lookup
+    to.addItem(backToMainItem);
+  }));
   to.addItem(backToMainItem);
 }));
 
@@ -72,7 +77,7 @@ main.addItem(new UIItem("Exit", "- Exit to mc0:/BOOT/BOOT.ELF", () => {
 
 const canvas = Screen.getMode();
 
-ui.set("main");
+ui.set(main);
 os.setInterval(() => {
   Screen.clear();
   ui.render();
