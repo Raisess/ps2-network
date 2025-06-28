@@ -25,7 +25,7 @@ const backToMainItem = new UIItem("Back", "- Back to previous menu", (ctx) => {
 });
 
 // -------- MAIN SCREEN -------- //
-const main = ui.createComponent("main", `PS2 Network: ${SERVER_IP}:${SERVER_PORT}`);
+const main = ui.createComponent("main", 'PS2 Network');
 
 // -------- SEARCH SCREEN -------- //
 main.addItem(new UIItem("Search Games", "- Search for games on the network", (ctx) => {
@@ -62,9 +62,11 @@ main.addItem(new UIItem("My Downloads", "- List all running downloads", (ctx) =>
 // -------- PING SCREEN -------- //
 main.addItem(new UIItem("Ping Server", "- Sends a ping message to test the server", (ctx) => {
   const pong = client.ping();
-  const to = ctx.ui.createComponent("ping", `Server ping: ${pong}`);
-  to.addItem(new UIItem("Address Lookup", "Search for the server on your network", (ctx) => {
-    const to = ctx.ui.createComponent("Address Lookup", "Looking up for address please wait...");
+  const to = ctx.ui.createComponent("ping", `Server ping: ${client.url} => ${pong}`);
+
+  // -------- ADDRESS LOOKUP SUBSCREEN -------- //
+  to.addItem(new UIItem("Address Lookup", "- Search for the server on your network", (ctx) => {
+    const to = ctx.ui.createComponent("address_lookup", "@TODO: Looking up for address please wait...");
     // @TODO: lookup
     to.addItem(backToMainItem);
   }));

@@ -17,15 +17,19 @@ export class PS2NetworkClient {
   }
 
   private readonly request: Request;
-  private readonly url: string;
 
-  constructor(host: string, port: number) {
+  constructor(private host: string, private port: number) {
     this.request = new Request();
-    this.url = `http://${host}:${port}`;
   }
 
-  public ping(): string {
+  public get url(): string {
+    return `http://${this.host}:${this.port}`
+  }
+
+  public ping(host?: string): string {
     try {
+      if (host) this.host = host
+
       const response = this.request.get(`${this.url}/ping`);
       return response.text;
     } catch {
