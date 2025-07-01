@@ -1,6 +1,6 @@
-/server/target
-/server/data.redb
+/packages/server/target
+/packages/server/data.redb
 
-/client/node_modules
-/client/dist
-/client/logs
+/packages/client/node_modules
+/packages/client/dist
+/packages/client/logs
